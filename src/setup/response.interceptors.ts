@@ -42,10 +42,25 @@ export class ResponseInterceptor<T> implements NestInterceptor<T, Response<T>> {
     const response = ctx.getResponse();
     const request = ctx.getRequest();
 
+    // const message =
+    //   exception instanceof HttpException
+    //     ? exception.getResponse()
+    //     : 'Internal Server Error';
+
     const status =
       exception instanceof HttpException
         ? exception.getStatus()
         : HttpStatus.INTERNAL_SERVER_ERROR;
+
+    if (exception.name === 'BadRequestException') {
+      return response.status(status).json({
+        status: false,
+        statusCode: status,
+        path: request.url,
+        message: exception.message,
+        timestamp: new Date().toISOString(),
+      });
+    }
     if (exception.name === 'QueryFailedError') {
       return response.status(status).json({
         status: false,
@@ -67,7 +82,7 @@ export class ResponseInterceptor<T> implements NestInterceptor<T, Response<T>> {
         timestamp: new Date().toISOString(),
       });
     }
-    console.log('eraererer', exception.message);
+
     return response.status(status).json({
       status: false,
       statusCode: status,

@@ -3,6 +3,7 @@ import * as Joi from 'joi';
 
 import { AuthService } from './auth.service';
 import { CREATE, JoiSchema, UPDATE } from 'nestjs-joi';
+import { User } from '../users/user.entity';
 
 export class UserValidation {
   @JoiSchema(Joi.string().required())
@@ -42,14 +43,12 @@ export class AuthController {
   constructor(private readonly service: AuthService) {}
 
   @Post('/register')
-  register(@Request() req): Promise<AuthProps> {
-    console.log('regis');
+  register(@Request() req): Promise<User> {
     return this.service.register(req.body);
   }
 
   @Post('/login')
   login(@Body() user: LoginValidation): Promise<AuthProps> {
-    console.log(user);
     return this.service.login(user.email, user.password);
   }
 }

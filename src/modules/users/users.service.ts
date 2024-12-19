@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './user.entity';
@@ -18,16 +18,11 @@ export class UsersService {
     private subscriptionService: SubscriptionService,
     private globalStore: GlobalStoreService,
   ) {}
-
-  async findAll(): Promise<User[]> {
+  queryAll = async () => {
     const token = this.globalStore.getterTokenData();
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    today.setHours(today.getHours() + 7); // Adjust to GMT+7
 
-    const getSubsc = await this.subscriptionService.findAll({
-      id: token.id,
-      status: 'active',
-    });
     const data = await this.usersRepository
       .createQueryBuilder('user')
       .select([
@@ -48,17 +43,29 @@ export class UsersService {
           .andWhere('DATE(swipe.created_at) = DATE(:today)', { today })
           .getQuery();
         return 'user.id NOT IN ' + subQuery;
-      })
-      .orderBy('RANDOM()');
+      });
+    return data;
+  };
+  async findAll(): Promise<User[]> {
+    const token = this.globalStore.getterTokenData();
+    const today = new Date();
+    today.setHours(today.getHours() + 7); // Adjust to GMT+7
+    const data = await this.queryAll();
+    const getSubsc = await this.subscriptionService.findAll({
+      id: token.id,
+      status: 'active',
+    });
+
     if (
       getSubsc.length > 0 &&
       getSubsc.find((x) => x.package === 'verified_badge')
     ) {
-      data.andWhere('user.is_verified = :verify', { verify: true });
+      data.orderBy('user.is_verified ', 'DESC');
     } else {
-      data.andWhere('user.is_verified = :verify', { verify: false });
+      data
+        .andWhere('user.is_verified = :verify', { verify: false })
+        .orderBy('RANDOM()');
     }
-
     if (
       getSubsc.length === 0 ||
       !getSubsc.find((x) => x.package === 'unlimited_swipes')
@@ -67,7 +74,12 @@ export class UsersService {
     }
     return data.getMany();
   }
-  findOne(id: string): Promise<any> {
+  async findOne(id: string): Promise<any> {
+    const datas = await this.queryAll();
+    const data = await datas.getRawMany();
+    if (!data.find((x) => x.id === id)) {
+      throw new BadRequestException('you already swipe this user today');
+    }
     return this.usersRepository.findOneBy({ id });
   }
 
@@ -86,20 +98,23 @@ export class UsersService {
       const unlimitedPackage = getSubsc.find(
         (x) => x.package === 'unlimited_swipes',
       );
-      const getCountDailySwipe =
-        await this.dailySwipeService.findOneByIdDate(id);
+      const getCountDailySwipe = await this.dailySwipeService.findOneByIdDate(
+        token.id,
+      );
 
       if (
         !unlimitedPackage &&
         getCountDailySwipe &&
-        getCountDailySwipe.swipe_count > 10
+        getCountDailySwipe.swipe_count >= 10
       ) {
-        throw new Error('You have reached the maximum swipe limit for today.');
+        throw new BadRequestException(
+          'You have reached the maximum swipe limit for today.',
+        );
       }
       const result = await this.swipeService.store(data);
       if (!getCountDailySwipe) {
         await this.dailySwipeService.store({
-          user_id: id,
+          user_id: token.id,
           swipe_count: 1,
         });
       } else {
@@ -109,8 +124,7 @@ export class UsersService {
       }
       return result;
     } catch (error: any) {
-      console.log('error', error);
-      throw new Error(error);
+      throw new BadRequestException(error);
     }
   }
 
@@ -118,8 +132,7 @@ export class UsersService {
     try {
       return this.usersRepository.save(user);
     } catch (error: any) {
-      console.log('tt', error);
-      throw new Error('Failed to create user');
+      throw new BadRequestException(error);
     }
   }
 }

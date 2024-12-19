@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Package } from './package.entity';
@@ -25,8 +25,7 @@ export class PackageService {
     try {
       return this.usersRepository.save(user);
     } catch (error: any) {
-      console.log('tt', error);
-      throw new Error('Failed to create user');
+      throw new BadRequestException(error);
     }
   }
 }

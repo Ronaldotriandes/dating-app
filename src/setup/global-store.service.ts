@@ -1,6 +1,6 @@
 import { Global, Injectable, Module } from '@nestjs/common';
 
-interface Token {
+export interface TokenDto {
   id: string;
   email: string;
   iat: number;
@@ -22,7 +22,7 @@ export class GlobalStoreService {
     return this.store.set('token', value);
   }
 
-  getterTokenData(): Token {
+  getterTokenData(): TokenDto {
     return this.store.get('token');
   }
 }

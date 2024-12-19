@@ -2,12 +2,14 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Swipe } from './swipe.entity';
+import { GlobalStoreService } from '../../setup/global-store.service';
 
 @Injectable()
 export class SwipeService {
   constructor(
     @InjectRepository(Swipe)
     private usersRepository: Repository<Swipe>,
+    private globalService: GlobalStoreService,
   ) {}
 
   findAll(): Promise<Swipe[]> {
@@ -17,11 +19,10 @@ export class SwipeService {
   findOne(id: string): Promise<Swipe | null> {
     return this.usersRepository.findOneBy({ id });
   }
-
-  async remove(id: number): Promise<void> {
-    await this.usersRepository.delete(id);
-  }
   async store(user: any): Promise<Swipe> {
+    const today = new Date();
+    today.setHours(today.getHours() + 7); // Adjust to GMT+7
+
     try {
       const sameData = await this.usersRepository
         .createQueryBuilder('swipe')
@@ -38,7 +39,7 @@ export class SwipeService {
       }
       return this.usersRepository.save(user);
     } catch (error: any) {
-      throw new Error(error);
+      throw new BadRequestException(error);
     }
   }
 }

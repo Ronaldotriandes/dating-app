@@ -22,7 +22,7 @@ export class AuthService {
       ...userData,
       password: hashedPassword,
     });
-    return this.generateToken(user);
+    return user;
   }
 
   async login(email: string, password: string) {

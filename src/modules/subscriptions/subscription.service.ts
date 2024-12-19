@@ -19,10 +19,6 @@ export class SubscriptionService {
   findOne(id: string): Promise<Subscription | null> {
     return this.usersRepository.findOneBy({ id, status: 'active' });
   }
-
-  async remove(id: number): Promise<void> {
-    await this.usersRepository.delete(id);
-  }
   async store(user: any): Promise<Subscription> {
     const token = this.globalSerice.getterTokenData();
     try {

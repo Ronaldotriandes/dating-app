@@ -18,7 +18,6 @@ export class QueryFailedExceptionFilter implements ExceptionFilter {
 
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
     let message = 'Database query failed';
-    console.log(exception.driverError.code);
     // Handle specific error codes
     switch (exception.driverError.code) {
       case 'ER_DUP_ENTRY':
